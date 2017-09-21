@@ -2,25 +2,28 @@ import os
 import sys
 import requests
 import json
+import importlib.util
 
 pluginpath = "Plugins/"
 
 def load_plugins():
     plugins = {}
     # Load plugins
-    sys.path.insert(0, pluginpath)
-    for f in os.listdir(pluginpath):
-        fname, ext = os.path.splitext(f)
-        if ext == '.py':
-            mod = __import__(fname)
-            instance = mod.Plugin()
-            try:
-                name, version = instance.register()
-                plugins[name] = {"version": version, "instance": instance}
-                print("Loaded plugin %s successfully" % name)
-            except AttributeError:
-                print("Loading plugin %s failed" % fname)
-    sys.path.pop(0)
+    for d in os.listdir(pluginpath):
+        possiblePlugin=os.path.join(pluginpath,d)
+        if os.path.isdir(possiblePlugin):
+            possiblePluginMain=os.path.join(possiblePlugin,"Plugin.py")
+            if os.path.isfile(possiblePluginMain):
+                spec = importlib.util.spec_from_file_location("Plugin", possiblePluginMain)
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                instance = mod.Plugin()
+                try:
+                    name, version = instance.register()
+                    plugins[name] = {"version": version, "instance": instance}
+                    print("Loaded plugin %s successfully" % name)
+                except AttributeError:
+                    print("Loading plugin %s failed" % fname)
     return plugins
 
 def get_job(plugins):
@@ -40,5 +43,6 @@ def handle_job(plugins, job):
     
 if __name__ == "__main__":
     plugins = load_plugins()
-    job = get_job(list(plugins.keys()))
-    handle_job(plugins, job)
+    #if len(plugins)>0:
+    #    job = get_job(list(plugins.keys()))
+    #    handle_job(plugins, job)
